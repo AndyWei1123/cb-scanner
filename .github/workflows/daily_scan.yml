@@ -34,7 +34,9 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add --ignore-missing cb_dashboard.html cb_data.json trade_log.json cb_history.json
+          for f in cb_dashboard.html cb_data.json trade_log.json cb_history.json; do
+            [ -f "$f" ] && git add "$f" || true
+          done
           if ! git diff --cached --quiet; then
             git commit -m "chore: auto update CB dashboard $(date +'%Y-%m-%d %H:%M UTC')"
             git push origin HEAD
