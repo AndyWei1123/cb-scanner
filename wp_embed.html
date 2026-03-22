@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8"/>
+  <title>WordPress 嵌入說明 - 可轉債儀表板</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 860px; margin: 40px auto; padding: 0 20px; color: #1f2937; line-height: 1.7; }
+    h1 { color: #111; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px; }
+    h2 { color: #374151; margin-top: 32px; }
+    .step { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px 20px; margin: 12px 0; }
+    .step-num { background: #2563eb; color: #fff; border-radius: 50%; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; margin-right: 8px; }
+    code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 13px; color: #dc2626; }
+    pre { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 13px; line-height: 1.6; }
+    .tip { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 10px 14px; border-radius: 0 6px 6px 0; margin: 12px 0; }
+    .warning { background: #fef2f2; border-left: 4px solid #ef4444; padding: 10px 14px; border-radius: 0 6px 6px 0; margin: 12px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+    th, td { padding: 8px 12px; border: 1px solid #e5e7eb; font-size: 13px; }
+    th { background: #f3f4f6; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<h1>📊 可轉債策略儀表板 — WordPress 部署指南</h1>
+
+<p>這份指南說明如何將 <code>cb_scanner.py</code> 產生的 <code>cb_dashboard.html</code> 嵌入您的 WordPress 網站。</p>
+
+<hr/>
+
+<h2>🗂 檔案說明</h2>
+<table>
+  <tr><th>檔案</th><th>說明</th></tr>
+  <tr><td><code>cb_scanner.py</code></td><td>主程式：抓取資料、計算訊號、產生 HTML</td></tr>
+  <tr><td><code>cb_dashboard.html</code></td><td>輸出的靜態儀表板（每次執行後更新）</td></tr>
+  <tr><td><code>requirements.txt</code></td><td>Python 套件需求</td></tr>
+  <tr><td><code>wp_embed.html</code></td><td>本說明文件</td></tr>
+</table>
+
+<h2>⚙ 安裝 Python 套件</h2>
+<div class="step">
+  <span class="step-num">1</span> 在終端機執行：
+  <pre>pip install -r requirements.txt</pre>
+</div>
+
+<h2>▶ 執行掃描並產生儀表板</h2>
+<div class="step">
+  <span class="step-num">2</span> 執行主程式（每次想更新資料時執行）：
+  <pre>python cb_scanner.py</pre>
+  執行完成後，會產生 <code>cb_dashboard.html</code>，用瀏覽器直接開啟可預覽。
+</div>
+
+<h2>🌐 嵌入 WordPress 的三種方式</h2>
+
+<h3>方法 A：上傳 HTML 並用 iFrame 嵌入（推薦）</h3>
+<div class="step">
+  <span class="step-num">1</span>
+  安裝 WordPress 外掛 <strong>WP File Manager</strong> 或使用主機的 cPanel/FTP，
+  將 <code>cb_dashboard.html</code> 上傳到：<br/>
+  <code>/wp-content/uploads/cb_dashboard.html</code>
+</div>
+<div class="step">
+  <span class="step-num">2</span>
+  在 WordPress 頁面編輯器中，新增「自訂 HTML」區塊，貼上：
+  <pre>&lt;iframe
+  src="https://你的網域.com/wp-content/uploads/cb_dashboard.html"
+  width="100%"
+  height="900"
+  style="border:none; border-radius:8px;"
+  scrolling="auto"&gt;
+&lt;/iframe&gt;</pre>
+</div>
+<div class="tip">
+  💡 如果頁面太高/太矮，調整 <code>height</code> 的數值即可。
+</div>
+
+<h3>方法 B：直接貼 HTML 內容（適合小型網站）</h3>
+<div class="step">
+  <span class="step-num">1</span>
+  安裝外掛 <strong>WPCode Lite</strong>（原 Insert Headers and Footers）。
+</div>
+<div class="step">
+  <span class="step-num">2</span>
+  開啟 <code>cb_dashboard.html</code>，全選並複製內容。
+</div>
+<div class="step">
+  <span class="step-num">3</span>
+  在 WordPress 編輯器新增「自訂 HTML」區塊，貼上完整 HTML。
+</div>
+<div class="warning">
+  ⚠ 部分 WordPress 主題或安全外掛（如 Wordfence）可能會過濾內嵌 HTML，
+  遇到此問題建議使用方法 A（iFrame）。
+</div>
+
+<h3>方法 C：搭配 cron 自動排程更新（進階）</h3>
+<p>如果您的網站主機或 VPS 支援 Python，可設定 cron job 每天自動執行：</p>
+<pre># 每個交易日下午 4:30 更新（台灣時區）
+30 16 * * 1-5 /usr/bin/python3 /path/to/cb_scanner.py</pre>
+<div class="tip">
+  💡 Mac/Linux 用 <code>crontab -e</code>；Windows 用「工作排程器」。
+</div>
+
+<h2>🔧 常見問題</h2>
+<table>
+  <tr><th>問題</th><th>解法</th></tr>
+  <tr>
+    <td>thefew.tw 資料抓不到</td>
+    <td>程式會自動退回 TWSE / TPEx，或使用示範資料。可在 <code>cb_scanner.py</code> 頂端的 <code>get_demo_cb_data()</code> 手動填入您的可轉債清單。</td>
+  </tr>
+  <tr>
+    <td>融券資料顯示「─」</td>
+    <td>TWSE 融券 API 只在盤後更新。請在收盤後（下午 4 點後）執行程式。</td>
+  </tr>
+  <tr>
+    <td>股價為 0 或空白</td>
+    <td>yfinance 需連網。確認 stock_code 格式正確（如 <code>2330</code>，勿加 .TW）。</td>
+  </tr>
+  <tr>
+    <td>上櫃股票找不到</td>
+    <td>程式已自動嘗試 <code>.TW</code> 與 <code>.TWO</code> 兩種後綴。</td>
+  </tr>
+</table>
+
+<h2>📋 自訂可轉債清單（手動模式）</h2>
+<p>若自動抓取失敗，可在 <code>cb_scanner.py</code> 的 <code>get_demo_cb_data()</code> 中手動維護清單：</p>
+<pre>def get_demo_cb_data():
+    return pd.DataFrame([
+        {
+          'cb_code': '91611',         # 可轉債代碼
+          'cb_name': '儒鴻一',        # 可轉債名稱
+          'stock_code': '1476',       # 標的股票代碼
+          'stock_name': '儒鴻',       # 股票名稱
+          'conversion_price': 285.0,  # 轉換價格
+          'cb_price': 102.5,          # 可轉債現價
+          'premium_rate': 2.5,        # 溢價率 (%)
+          'issue_price': 100,         # 發行價格
+          'maturity_date': '2027-06-30',
+        },
+        # 繼續新增...
+    ])</pre>
+
+<hr/>
+<p style="color:#9ca3af; font-size:12px; text-align:center;">
+  本工具僅供學習與研究參考，不構成任何投資建議。使用者需自行評估風險。
+</p>
+
+</body>
+</html>

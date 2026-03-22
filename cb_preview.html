@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>可轉債策略儀表板 — WordPress 預覽</title>
+  <style>
+    /* ═══ WordPress 頁面外框模擬 ═══ */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #f0f0f1; font-family: 'Helvetica Neue', Arial, sans-serif; }
+
+    .wp-page {
+      max-width: 1200px; margin: 0 auto; background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+
+    /* 頁面主體 */
+    .wp-page-body { padding: 24px 40px 40px; }
+
+    /* ═══ 儀表板樣式 ═══ */
+    :root {
+      --green: #16a34a; --green-light: #dcfce7;
+      --red: #dc2626; --red-light: #fee2e2;
+      --blue: #2563eb; --blue-light: #dbeafe;
+      --amber: #d97706; --amber-light: #fef3c7;
+      --purple: #7c3aed; --purple-light: #ede9fe;
+      --gray: #6b7280; --border: #e5e7eb;
+      --bg: #f8fafc; --card: #ffffff;
+      --radius: 10px;
+    }
+
+    .db-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 18px; flex-wrap: wrap; gap: 6px;
+    }
+    .db-header h2 { font-size: 18px; font-weight: 700; color: #111; display: flex; align-items: center; gap: 8px; }
+    .update-badge {
+      background: #e0f2fe; color: #0369a1; font-size: 11px;
+      padding: 3px 10px; border-radius: 20px; font-weight: 500;
+    }
+
+    /* ── 策略說明 ── */
+    .legend {
+      background: #fffbeb; border: 1px solid #fde68a;
+      border-radius: var(--radius); padding: 14px 18px;
+      margin-bottom: 20px; font-size: 13px;
+    }
+    .legend-title { font-weight: 700; color: #92400e; margin-bottom: 10px; font-size: 13px; }
+    .legend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media(max-width:640px) { .legend-grid { grid-template-columns: 1fr; } }
+    .legend-box strong { display: block; margin-bottom: 6px; }
+    .legend-box ol { padding-left: 18px; color: #451a03; }
+    .legend-box ol li { margin: 3px 0; line-height: 1.5; }
+
+    /* ── Stat Cards ── */
+    .stats { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .stat {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 18px;
+      flex: 1; min-width: 120px; text-align: center;
+      transition: transform .15s, box-shadow .15s;
+    }
+    .stat:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+    .stat .num { font-size: 30px; font-weight: 800; line-height: 1.1; }
+    .stat .lbl { color: var(--gray); font-size: 11px; margin-top: 4px; }
+    .stat.green .num { color: var(--green); }
+    .stat.red   .num { color: var(--red); }
+    .stat.blue  .num { color: var(--blue); }
+    .stat.amber .num { color: var(--amber); }
+    .stat.purple .num { color: var(--purple); }
+
+    /* ── Section ── */
+    .section {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); margin-bottom: 20px; overflow: hidden;
+    }
+    .sec-hd {
+      padding: 12px 16px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .sec-hd h3 { font-size: 14px; font-weight: 700; }
+    .sec-hd .cnt { background: #f3f4f6; color: #374151; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 12px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .dot-green  { background: var(--green); }
+    .dot-red    { background: var(--red); }
+    .dot-amber  { background: var(--amber); }
+    .dot-blue   { background: var(--blue); }
+    .dot-purple { background: var(--purple); }
+
+    /* ── Tables ── */
+    .tbl-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    th { background: #f8fafc; font-size: 11px; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: .4px; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; transition: background .1s; }
+
+    .buy-row { background: #f0fdf4 !important; }
+    .buy-row:hover td { background: #dcfce7 !important; }
+    .sell-row { background: #fff1f2 !important; }
+    .sell-row:hover td { background: #ffe4e6 !important; }
+
+    .price { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .sub   { display: block; color: var(--gray); font-size: 11px; margin-top: 1px; }
+
+    /* ── Badges ── */
+    .chk {
+      display: inline-block; padding: 2px 7px; border-radius: 4px;
+      font-size: 11px; font-weight: 600; margin: 1px;
+    }
+    .chk-ok   { background: var(--green-light); color: var(--green); }
+    .chk-fail { background: var(--red-light);   color: var(--red); }
+    .chk-na   { background: #f3f4f6;            color: var(--gray); }
+
+    .tag-buy  { background: var(--green); color: #fff; padding: 3px 9px; border-radius: 5px; font-size: 11px; font-weight: 700; }
+    .tag-sell { background: var(--red);   color: #fff; padding: 3px 9px; border-radius: 5px; font-size: 11px; font-weight: 700; }
+
+    /* ── Milestone Badges (animated) ── */
+    .ms { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 800; margin-left: 5px; }
+    .ms-split-now  { background: #fbbf24; color: #78350f; animation: pulse 1.4s ease-in-out infinite; }
+    .ms-split-soon { background: #fde68a; color: #92400e; }
+    .ms-conv-now   { background: #818cf8; color: #fff;    animation: pulse 1.4s ease-in-out infinite; }
+    .ms-conv-soon  { background: #c7d2fe; color: #3730a3; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.7;transform:scale(1.05)} }
+
+    /* ── CBAS Alerts ── */
+    .alert-wrap { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+    .alert-card {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 12px 14px; border-radius: 8px; border: 1px solid;
+    }
+    .alert-critical { background: #fff7ed; border-color: #fb923c; }
+    .alert-high     { background: #fffbeb; border-color: #fbbf24; }
+    .alert-icon { font-size: 22px; flex-shrink: 0; margin-top: 1px; }
+    .alert-title { font-weight: 700; font-size: 13px; margin-bottom: 3px; }
+    .alert-desc  { color: var(--gray); font-size: 12px; line-height: 1.5; }
+
+    /* ── History Cards ── */
+    .hist-card { border: 1px solid var(--border); border-radius: 8px; margin: 12px 16px; overflow: hidden; }
+    .hist-hd { background: #f8fafc; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px; }
+    .hist-hd strong { font-size: 13px; }
+    .hist-meta { color: var(--gray); font-size: 12px; }
+    .hist-table { width: 100%; border-collapse: collapse; }
+    .hist-table th, .hist-table td { padding: 7px 12px; font-size: 12px; border-bottom: 1px solid var(--border); }
+    .hist-table th { background: #f8fafc; color: var(--gray); font-weight: 700; font-size: 11px; text-transform: uppercase; }
+    .hist-table tr:last-child td { border-bottom: none; }
+    .profit { color: var(--green); font-weight: 700; }
+    .loss   { color: var(--red);   font-weight: 700; }
+
+    /* ── Trade Log ── */
+    .open-row   { background: #fefce8; }
+    .profit-row { background: #f0fdf4; }
+    .loss-row   { background: #fff1f2; }
+
+    /* ── Volume ── */
+    .vol-ok   { color: var(--green); font-weight: 600; }
+    .vol-low  { color: var(--amber); font-weight: 600; }
+    .vol-thin { color: var(--red);   font-weight: 600; }
+
+    .empty { color: var(--gray); font-style: italic; text-align: center; padding: 24px; font-size: 13px; }
+  </style>
+</head>
+<body>
+
+<!-- WordPress 頁面 -->
+<div class="wp-page">
+
+  <!-- 頁面主體 (儀表板嵌入區) -->
+  <div class="wp-page-body">
+
+    <!-- ── 儀表板頂部 ── -->
+    <div class="db-header">
+      <h2>📊 可轉債策略儀表板 <small style="font-size:13px;font-weight:400;color:#6b7280;">v2</small></h2>
+      <span class="update-badge">🕐 最後更新：2026-03-17 16:35</span>
+    </div>
+
+    <!-- 策略說明 -->
+    <div class="legend">
+      <div class="legend-title">⚙ 可轉債交易邏輯（現股策略）</div>
+      <div class="legend-grid">
+        <div class="legend-box">
+          <strong>🟢 買進訊號（4 條件全符合）</strong>
+          <ol>
+            <li>融券餘額_t &lt; 融券餘額_(t-1)，連續兩日</li>
+            <li>收盤 &gt; 開盤（紅K），連續兩日以上</li>
+            <li>股本小於 30 億</li>
+            <li>交易量 &gt; 10 日均量</li>
+          </ol>
+        </div>
+        <div class="legend-box">
+          <strong>🔴 賣出訊號（3 條件全符合）</strong>
+          <ol>
+            <li>融券餘額至少單日減少 200 張</li>
+            <li>股價 &gt; 10 日均線</li>
+            <li>股本小於 30 億</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="stats">
+      <div class="stat blue">
+        <div class="num">5</div>
+        <div class="lbl">可轉債總數</div>
+      </div>
+      <div class="stat blue">
+        <div class="num">5</div>
+        <div class="lbl">已掃描標的</div>
+      </div>
+      <div class="stat green">
+        <div class="num">2</div>
+        <div class="lbl">買進訊號</div>
+      </div>
+      <div class="stat red">
+        <div class="num">1</div>
+        <div class="lbl">賣出訊號</div>
+      </div>
+      <div class="stat amber">
+        <div class="num">2</div>
+        <div class="lbl">⚡ CBAS 節點</div>
+      </div>
+      <div class="stat purple">
+        <div class="num">3</div>
+        <div class="lbl">持倉中</div>
+      </div>
+      <div class="stat green">
+        <div class="num">75%</div>
+        <div class="lbl">歷史勝率</div>
+      </div>
+    </div>
+
+    <!-- ④ CBAS 時間節點 -->
+    <div class="section">
+      <div class="sec-hd">
+        <div class="dot dot-amber"></div>
+        <h3>⚡ CBAS 重要時間節點</h3>
+        <span style="color:#6b7280;font-size:12px;margin-left:4px;">上市第 6 交易日（可拆分）｜ 上市第 90 天（可轉換）</span>
+      </div>
+      <div class="alert-wrap">
+
+        <!-- 今日可拆分 -->
+        <div class="alert-card alert-critical">
+          <div class="alert-icon">⚡</div>
+          <div>
+            <div class="alert-title">91651 雷虎一 — CBAS 今日可拆分！</div>
+            <div class="alert-desc">
+              上市第 <strong>6 個交易日</strong>，今天起可申請 CBAS 拆分（債券 + 換股權利分離）｜
+              上市日：2026-03-10 ｜ 已過 6 個交易日
+            </div>
+          </div>
+        </div>
+
+        <!-- 明天可拆分 -->
+        <div class="alert-card alert-high">
+          <div class="alert-icon">⚡</div>
+          <div>
+            <div class="alert-title">91611 儒鴻一 — CBAS 拆分即將到來（1 交易日後）</div>
+            <div class="alert-desc">
+              目前第 5 個交易日，明天（第 6 日）即可申請拆分｜
+              上市日：2026-03-11 ｜ 已過 5 個交易日
+            </div>
+          </div>
+        </div>
+
+        <!-- 即將進入可轉換期 -->
+        <div class="alert-card alert-high">
+          <div class="alert-icon">🔄</div>
+          <div>
+            <div class="alert-title">98451 台半一 — 即將進入可轉換期（2 天後）</div>
+            <div class="alert-desc">
+              上市第 88 天，再 <strong>2 天</strong>（共 90 天）起可申請轉換成標的股票｜
+              上市日：2025-12-19 ｜ 已過 88 自然日
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 🟢 買進訊號 -->
+    <div class="section">
+      <div class="sec-hd">
+        <div class="dot dot-green"></div>
+        <h3>🟢 買進訊號</h3>
+        <span class="cnt">2 筆</span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>股票代號</th><th>股票名稱</th><th>最新股價</th>
+              <th>融券餘額(張)</th><th>股本</th><th>訊號條件</th><th>相關可轉債</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="buy-row">
+              <td><strong>1476</strong></td>
+              <td>儒鴻 <span class="ms ms-split-soon">⚡ 拆分 -1日</span></td>
+              <td class="price">289.0 <span style="color:green;font-size:11px">(+1.4%)</span></td>
+              <td>1,100 <span class="sub">(-100)</span></td>
+              <td>22.5 億</td>
+              <td>
+                <span class="chk chk-ok">融券連降</span>
+                <span class="chk chk-ok">連續紅K</span>
+                <span class="chk chk-ok">股本&lt;30億</span>
+                <span class="chk chk-ok">量&gt;10日均</span>
+              </td>
+              <td style="font-size:12px;">91611 (儒鴻一)</td>
+            </tr>
+            <tr class="buy-row">
+              <td><strong>5425</strong></td>
+              <td>台半 <span class="ms ms-conv-soon">🔄 轉換 -2日</span></td>
+              <td class="price">82.5 <span style="color:green;font-size:11px">(+2.1%)</span></td>
+              <td>880 <span class="sub">(-65)</span></td>
+              <td>18.3 億</td>
+              <td>
+                <span class="chk chk-ok">融券連降</span>
+                <span class="chk chk-ok">連續紅K</span>
+                <span class="chk chk-ok">股本&lt;30億</span>
+                <span class="chk chk-ok">量&gt;10日均</span>
+              </td>
+              <td style="font-size:12px;">98451 (台半一)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 🔴 賣出訊號 -->
+    <div class="section">
+      <div class="sec-hd">
+        <div class="dot dot-red"></div>
+        <h3>🔴 賣出訊號</h3>
+        <span class="cnt">1 筆</span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>股票代號</th><th>股票名稱</th><th>最新股價</th>
+              <th>融券餘額(張)</th><th>股本</th><th>訊號條件</th><th>相關可轉債</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="sell-row">
+              <td><strong>8033</strong></td>
+              <td>雷虎 <span class="ms ms-split-now">⚡ 今日可拆!</span></td>
+              <td class="price">48.2 <span style="color:green;font-size:11px">(+3.2%)</span></td>
+              <td>580 <span class="sub">(-310)</span></td>
+              <td>8.2 億</td>
+              <td>
+                <span class="chk chk-ok">融券減≥200張</span>
+                <span class="chk chk-ok">股價&gt;10日均</span>
+                <span class="chk chk-ok">股本&lt;30億</span>
+              </td>
+              <td style="font-size:12px;">91651 (雷虎一)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ③ 交易記錄 -->
+    <div class="section">
+      <div class="sec-hd">
+        <div class="dot dot-purple"></div>
+        <h3>📒 交易記錄</h3>
+        <span style="color:#6b7280;font-size:12px;margin-left:6px;">
+          持倉 3 ｜ 已結 4 ｜ 勝率 75% ｜ 均損益 +6.2%
+        </span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>進場日</th><th>CB 代碼</th><th>CB 名稱</th><th>股票</th>
+              <th>訊號</th><th>進場CB價</th><th>出場CB價</th><th>損益(%)</th>
+              <th>出場日</th><th>狀態</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="open-row">
+              <td>2026-03-17</td><td><strong>91611</strong></td><td>儒鴻一</td><td>1476</td>
+              <td><span class="tag-buy">🟢 買進</span></td>
+              <td class="price">102.5</td><td>─</td>
+              <td class="profit">浮動 +1.2%</td>
+              <td>─</td><td>📂 持倉中</td>
+            </tr>
+            <tr class="open-row">
+              <td>2026-03-17</td><td><strong>98451</strong></td><td>台半一</td><td>5425</td>
+              <td><span class="tag-buy">🟢 買進</span></td>
+              <td class="price">101.8</td><td>─</td>
+              <td class="profit">浮動 +0.8%</td>
+              <td>─</td><td>📂 持倉中</td>
+            </tr>
+            <tr class="open-row">
+              <td>2026-03-15</td><td><strong>91651</strong></td><td>雷虎一</td><td>8033</td>
+              <td><span class="tag-sell">🔴 賣出</span></td>
+              <td class="price">103.2</td><td>─</td>
+              <td class="profit">浮動 +2.1%</td>
+              <td>─</td><td>📂 持倉中</td>
+            </tr>
+            <tr class="profit-row">
+              <td>2026-03-05</td><td><strong>34501</strong></td><td>聯電一</td><td>2303</td>
+              <td><span class="tag-buy">🟢 買進</span></td>
+              <td class="price">99.5</td><td class="price">106.8</td>
+              <td class="profit">+7.34%</td>
+              <td>2026-03-14</td><td>📈 獲利</td>
+            </tr>
+            <tr class="profit-row">
+              <td>2026-02-20</td><td><strong>23871</strong></td><td>中鋼構一</td><td>2390</td>
+              <td><span class="tag-buy">🟢 買進</span></td>
+              <td class="price">104.0</td><td class="price">112.5</td>
+              <td class="profit">+8.17%</td>
+              <td>2026-03-08</td><td>📈 獲利</td>
+            </tr>
+            <tr class="profit-row">
+              <td>2026-02-10</td><td><strong>91611</strong></td><td>儒鴻一</td><td>1476</td>
+              <td><span class="tag-buy">🟢 買進</span></td>
+              <td class="price">101.2</td><td class="price">108.0</td>
+              <td class="profit">+6.72%</td>
+              <td>2026-02-25</td><td>📈 獲利</td>
+            </tr>
+            <tr class="loss-row">
+              <td>2026-01-15</td><td><strong>98451</strong></td><td>台半一</td><td>5425</td>
+              <td><span class="tag-sell">🔴 賣出</span></td>
+              <td class="price">102.1</td><td class="price">100.3</td>
+              <td class="loss">-1.76%</td>
+              <td>2026-01-28</td><td>📉 虧損</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 可轉債完整清單 -->
+    <div class="section">
+      <div class="sec-hd">
+        <div class="dot dot-blue"></div>
+        <h3>📋 可轉債完整清單（含 ① 流動性 ② 歷史勝率 ④ 時間節點）</h3>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>CB 代碼</th><th>CB 名稱</th><th>股票代號</th><th>股票名稱</th>
+              <th>現股股價</th><th>CB 現價</th><th>轉換價</th><th>溢價率</th>
+              <th>到期日 / 上市天數</th>
+              <th>① CB 成交量</th>
+              <th>② 歷史勝率</th>
+              <th>訊號</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>91611</td>
+              <td>儒鴻一 <span class="ms ms-split-soon">⚡ 拆分 -1日</span></td>
+              <td><strong>1476</strong></td><td>儒鴻</td>
+              <td class="price">289.0</td><td>102.5</td><td>285.0</td><td>+2.5%</td>
+              <td>2028-06-30<span class="sub">上市 5 天 / 5 交易日</span></td>
+              <td><span class="vol-ok">🟢 充足 (320 張)</span><span class="sub">32.8 百萬</span></td>
+              <td>勝率 100%<span class="sub" style="color:green;">均損益 +19.0%</span></td>
+              <td><span class="tag-buy">買進</span></td>
+            </tr>
+            <tr>
+              <td>91651</td>
+              <td>雷虎一 <span class="ms ms-split-now">⚡ 今日可拆!</span></td>
+              <td><strong>8033</strong></td><td>雷虎</td>
+              <td class="price">48.2</td><td>103.2</td><td>45.0</td><td>+3.2%</td>
+              <td>2028-08-15<span class="sub">上市 6 天 / 6 交易日</span></td>
+              <td><span class="vol-low">🟡 偏低 (88 張)</span><span class="sub">9.1 百萬</span></td>
+              <td>勝率 0%<span class="sub" style="color:red;">均損益 -1.5%</span></td>
+              <td><span class="tag-sell">賣出</span></td>
+            </tr>
+            <tr>
+              <td>98451</td>
+              <td>台半一 <span class="ms ms-conv-soon">🔄 轉換 -2日</span></td>
+              <td><strong>5425</strong></td><td>台半</td>
+              <td class="price">82.5</td><td>101.8</td><td>78.5</td><td>+1.8%</td>
+              <td>2028-03-20<span class="sub">上市 88 天 / 63 交易日</span></td>
+              <td><span class="vol-thin">🔴 不足 (45 張)</span><span class="sub">4.6 百萬</span></td>
+              <td>勝率 100%<span class="sub" style="color:green;">均損益 +9.8%</span></td>
+              <td><span class="tag-buy">買進</span></td>
+            </tr>
+            <tr>
+              <td>34501</td>
+              <td>聯電一</td>
+              <td><strong>2303</strong></td><td>聯電</td>
+              <td class="price">58.3</td><td>99.5</td><td>55.0</td><td>-0.5%</td>
+              <td>2026-12-31<span class="sub">上市 200 天 / 143 交易日</span></td>
+              <td><span class="vol-ok">🟢 充足 (1,200 張)</span><span class="sub">119.4 百萬</span></td>
+              <td>勝率 100%<span class="sub" style="color:green;">均損益 +3.2%</span></td>
+              <td>─</td>
+            </tr>
+            <tr>
+              <td>23871</td>
+              <td>中鋼構一</td>
+              <td><strong>2390</strong></td><td>中鋼構</td>
+              <td class="price">65.8</td><td>104.0</td><td>62.0</td><td>+4.0%</td>
+              <td>2027-09-10<span class="sub">上市 150 天 / 107 交易日</span></td>
+              <td><span class="vol-thin">🔴 不足 (18 張)</span><span class="sub">1.9 百萬</span></td>
+              <td>無記錄</td>
+              <td>─</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ② 公司歷史 CB 案例 -->
+    <div class="section">
+      <div class="sec-hd">
+        <div class="dot dot-blue"></div>
+        <h3>📚 公司歷史 CB 案例（含過去損益）</h3>
+      </div>
+
+      <!-- 儒鴻 -->
+      <div class="hist-card">
+        <div class="hist-hd">
+          <strong>1476 儒鴻</strong>
+          <span class="hist-meta">歷史 2 檔 ｜ 已結案 2 ｜ 勝率 <span style="color:green;font-weight:700;">100%</span> ｜ 平均損益 <span style="color:green;font-weight:700;">+19.0%</span></span>
+        </div>
+        <table class="hist-table">
+          <thead><tr><th>代碼</th><th>名稱</th><th>發行日</th><th>到期日</th><th>轉換價</th><th>出場價</th><th>損益</th><th>結果</th><th>備註</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>91601</td><td>儒鴻一(已結)</td><td>2021-03-10</td><td>2024-03-10</td>
+              <td>220.0</td><td>115.2</td><td class="profit">+15.2%</td>
+              <td>📈 profit</td><td>到期前提前贖回</td>
+            </tr>
+            <tr>
+              <td>91591</td><td>儒鴻零(已結)</td><td>2019-06-01</td><td>2022-06-01</td>
+              <td>180.0</td><td>122.5</td><td class="profit">+22.5%</td>
+              <td>📈 profit</td><td>股價高漲後轉換</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 雷虎 -->
+      <div class="hist-card">
+        <div class="hist-hd">
+          <strong>8033 雷虎</strong>
+          <span class="hist-meta">歷史 1 檔 ｜ 已結案 1 ｜ 勝率 <span style="color:red;font-weight:700;">0%</span> ｜ 平均損益 <span style="color:red;font-weight:700;">-1.5%</span></span>
+        </div>
+        <table class="hist-table">
+          <thead><tr><th>代碼</th><th>名稱</th><th>發行日</th><th>到期日</th><th>轉換價</th><th>出場價</th><th>損益</th><th>結果</th><th>備註</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>91641</td><td>雷虎零(已結)</td><td>2022-11-01</td><td>2025-11-01</td>
+              <td>42.0</td><td>98.5</td><td class="loss">-1.5%</td>
+              <td>📉 loss</td><td>股價未達轉換價</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 台半 -->
+      <div class="hist-card">
+        <div class="hist-hd">
+          <strong>5425 台半</strong>
+          <span class="hist-meta">歷史 1 檔 ｜ 已結案 1 ｜ 勝率 <span style="color:green;font-weight:700;">100%</span> ｜ 平均損益 <span style="color:green;font-weight:700;">+9.8%</span></span>
+        </div>
+        <table class="hist-table">
+          <thead><tr><th>代碼</th><th>名稱</th><th>發行日</th><th>到期日</th><th>轉換價</th><th>出場價</th><th>損益</th><th>結果</th><th>備註</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>98441</td><td>台半零(已結)</td><td>2020-08-15</td><td>2023-08-15</td>
+              <td>65.0</td><td>109.8</td><td class="profit">+9.8%</td>
+              <td>📈 profit</td><td>轉換成股票</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+  </div><!-- /wp-page-body -->
+
+</div><!-- /wp-page -->
+
+</body>
+</html>
