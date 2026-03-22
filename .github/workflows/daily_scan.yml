@@ -34,9 +34,10 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # 加入所有產出檔（HTML + JSON + 交易日誌）
           git add --ignore-missing cb_dashboard.html cb_data.json trade_log.json cb_history.json
-          # 只有實際有變更才 commit，避免空 commit 報錯
-          git diff --cached --quiet \
-            || git commit -m "chore: auto update CB dashboard $(date +'%Y-%m-%d %H:%M UTC')"
-          git push
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: auto update CB dashboard $(date +'%Y-%m-%d %H:%M UTC')"
+            git push origin HEAD
+          else
+            echo "No changes to commit, skipping push."
+          fi
